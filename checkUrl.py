@@ -1,17 +1,14 @@
 import os
 import requests
 from bs4 import BeautifulSoup
-from telegram.ext import Updater, CommandHandler
 import logging
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Telegram Bot Token (set this in Heroku Config Vars)
+# Telegram Bot Token and Chat ID (set these in GitHub Secrets)
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
-
-# Telegram Chat ID (set this in Heroku Config Vars)
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 
 def read_urls_from_file(filename):
@@ -48,7 +45,9 @@ def send_telegram_message(message):
         "chat_id": TELEGRAM_CHAT_ID,
         "text": message
     }
-    requests.post(url, json=payload)
+    response = requests.post(url, json=payload)
+    if response.status_code != 200:
+        logger.error(f"Failed to send Telegram message: {response.text}")
 
 def check_availability():
     for url, address in URLS_TO_CHECK.items():
@@ -68,19 +67,10 @@ def check_availability():
         except requests.RequestException as e:
             logger.error(f"Error checking {url}: {str(e)}")
 
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, 
-                             text="Housing availability checker is running. You will be notified when housing becomes available.")
-
 def main():
-    updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True)
-    dp = updater.dispatcher
-    dp.add_handler(CommandHandler("start", start))
-    
-    updater.start_polling()
-    
-    while True:
-        check_availability()
+    logger.info("Starting housing availability check")
+    check_availability()
+    logger.info("Finished housing availability check")
 
 if __name__ == '__main__':
     main()
