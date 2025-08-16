@@ -53,11 +53,12 @@ def is_housing_available(html_content, url):
     # Check for availability in JSON data
     scripts = soup.find_all('script', type='application/json')
     for script in scripts:
-        if 'available' in script.string:
-            logger.info(f"Found JSON data for {url}: {script.string}")
-            if '"available":true' in script.string:
+        content = script.string
+        if content and 'available' in content:
+            logger.info(f"Found JSON data for {url}: {content}")
+            if '"available":true' in content:
                 return True
-            elif '"available":false' in script.string:
+            elif '"available":false' in content:
                 return False
     
     logger.warning(f"Could not determine availability for {url}")
