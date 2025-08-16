@@ -14,8 +14,11 @@ logger = logging.getLogger(__name__)
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 
+# Base directory for data files
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # File to store the state
-STATE_FILE = 'housing_state.json'
+STATE_FILE = os.path.join(BASE_DIR, 'housing_state.json')
 
 def read_urls_from_file(filename):
     urls = {}
@@ -27,7 +30,9 @@ def read_urls_from_file(filename):
                 urls[url] = address
     return urls
 
-URLS_TO_CHECK = read_urls_from_file('ile_de_france_addresses.txt')
+URLS_TO_CHECK = read_urls_from_file(
+    os.path.join(BASE_DIR, 'ile_de_france_addresses.txt')
+)
 
 def is_housing_available(html_content, url):
     soup = BeautifulSoup(html_content, 'html.parser')
@@ -94,9 +99,14 @@ def check_availability():
             response = requests.get(url)
             response.raise_for_status()
             is_available = is_housing_available(response.text, url)
-            
+
+            if is_available is None:
+                current_state[url] = previous_state.get(url)
+                logger.info(f"Checked {url}: availability unknown")
+                continue
+
             current_state[url] = is_available
-            
+
             if url not in previous_state:
                 if is_available:
                     changes.append(f"New listing available: {address}\nURL: {url}")
@@ -105,7 +115,7 @@ def check_availability():
                     changes.append(f"Now available: {address}\nURL: {url}")
                 else:
                     changes.append(f"No longer available: {address}\nURL: {url}")
-            
+
             logger.info(f"Checked {url}: {'Available' if is_available else 'Not available'}")
         except requests.RequestException as e:
             logger.error(f"Error checking {url}: {str(e)}")
