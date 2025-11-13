@@ -45,6 +45,21 @@ def is_housing_available(html_content, url):
             return True
         elif button.get('title') == "Indisponible" or "Indisponible" in button.text:
             return False
+
+    login_button = soup.find(
+        'button',
+        string=lambda text: text and "Connectez-vous pour vérifier les disponibilités" in text,
+    )
+    if login_button:
+        logger.info(
+            "Found login availability button for %s: text='%s'", url, login_button.text.strip()
+        )
+        return True
+
+    cta_container = soup.select_one('div.fr-card__cta')
+    if cta_container and not cta_container.find('button'):
+        logger.info("CTA container without button detected for %s", url)
+        return False
     
     # Check for the span
     span = soup.find('span', class_='svelte-eq6rxe')
